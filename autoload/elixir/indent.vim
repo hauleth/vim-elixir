@@ -1,56 +1,50 @@
-function! elixir#indent#()
-  if !exists('s:constants')
-    let s:constants = {}
-    let s:constants.no_colon_before = ':\@<!'
-    let s:constants.no_colon_after = ':\@!'
-    let s:constants.ending_symbols = '\]\|}\|)'
-    let s:constants.starting_symbols = '\[\|{\|('
-    let s:constants.arrow = '->'
-    let s:constants.end_with_arrow = s:constants.arrow.'$'
-    let s:constants.skip_syntax = '\%(Comment\|String\)$'
-    let s:constants.block_skip = "synIDattr(synID(line('.'),col('.'),1),'name') =~? '".s:constants.skip_syntax."'"
-    let s:constants.fn = '\<fn\>'
-    let s:constants.multiline_fn = s:constants.fn.'\%(.*end\)\@!'
-    let s:constants.block_start = '\%(\<do\>\|'.s:constants.fn.'\)\>'
-    let s:constants.multiline_block = '\%(\<do\>'.s:constants.no_colon_after.'\|'.s:constants.multiline_fn.'\)'
-    let s:constants.block_middle = '\<\%(else\|match\|elsif\|catch\|after\|rescue\)\>'
-    let s:constants.block_end = 'end'
-    let s:constants.starts_with_pipeline = '^\s*|>.*$'
-    let s:constants.ending_with_assignment = '=\s*$'
+let s:constants = {}
+let s:NO_COLON_BEFORE = ':\@<!'
+let s:NO_COLON_AFTER = ':\@!'
+let s:ENDING_SYMBOLS = '\]\|}\|)'
+let s:STARTING_SYMBOLS = '\[\|{\|('
+let s:ARROW = '->'
+let s:END_WITH_ARROW = s:ARROW.'$'
+let s:SKIP_SYNTAX = '\%(Comment\|String\)$'
+let s:BLOCK_SKIP = "synIDattr(synID(line('.'),col('.'),1),'name') =~? '".s:SKIP_SYNTAX."'"
+let s:FN = '\<fn\>'
+let s:MULTILINE_FN = s:FN.'\%(.*end\)\@!'
+let s:BLOCK_START = '\%(\<do\>\|'.s:FN.'\)\>'
+let s:MULTILINE_BLOCK = '\%(\<do\>'.s:NO_COLON_AFTER.'\|'.s:MULTILINE_FN.'\)'
+let s:BLOCK_MIDDLE = '\<\%(else\|match\|elsif\|catch\|after\|rescue\)\>'
+let s:BLOCK_END = 'end'
+let s:STARTS_WITH_PIPELINE = '^\s*|>.*$'
+let s:ENDING_WITH_ASSIGNMENT = '=\s*$'
 
-    let s:constants.indent_keywords = s:constants.no_colon_before.'\%('.s:constants.multiline_block.'\|'.s:constants.block_middle.'\)'
-    let s:constants.deindent_keywords = '^\s*\<\%('.s:constants.block_end.'\|'.s:constants.block_middle.'\)\>'
+let s:INDENT_KEYWORDS = s:NO_COLON_BEFORE.'\%('.s:MULTILINE_BLOCK.'\|'.s:BLOCK_MIDDLE.'\)'
+let s:DEINDENT_KEYWORDS = '^\s*\<\%('.s:BLOCK_END.'\|'.s:BLOCK_MIDDLE.'\)\>'
 
-    let s:constants.pair_start = '\<\%('.s:constants.no_colon_before.s:constants.block_start.'\)\>'.s:constants.no_colon_after
-    let s:constants.pair_middle = '^\s*\%('.s:constants.block_middle.'\)\>'.s:constants.no_colon_after.'\zs'
-    let s:constants.pair_end = '\<\%('.s:constants.no_colon_before.s:constants.block_end.'\)\>\zs'
-  end
-
-  return s:constants
-endfunction
+let s:PAIR_START = '\<\%('.s:NO_COLON_BEFORE.s:BLOCK_START.'\)\>'.s:NO_COLON_AFTER
+let s:PAIR_MIDDLE = '^\s*\%('.s:BLOCK_MIDDLE.'\)\>'.s:NO_COLON_AFTER.'\zs'
+let s:PAIR_END = '\<\%('.s:NO_COLON_BEFORE.s:BLOCK_END.'\)\>\zs'
 
 function! s:pending_parenthesis(data)
-  if a:data.last_line !~ elixir#indent#().arrow
+  if a:data.last_line !~ s:ARROW
     return elixir#util#count_indentable_symbol_diff(a:data, '(', '\%(end\s*\)\@<!)')
   end
 endfunction
 
 function! s:pending_square_brackets(data)
-  if a:data.last_line !~ elixir#indent#().arrow
+  if a:data.last_line !~ s:ARROW
     return elixir#util#count_indentable_symbol_diff(a:data, '[', ']')
   end
 endfunction
 
 function! s:pending_brackets(data)
-  if a:data.last_line !~ elixir#indent#().arrow
+  if a:data.last_line !~ s:ARROW
     return elixir#util#count_indentable_symbol_diff(a:data, '{', '}')
   end
 endfunction
 
 function! elixir#indent#deindent_case_arrow(ind, data)
   if get(b:old_ind, 'arrow', 0) > 0
-        \ && (a:data.current_line =~ elixir#indent#().arrow
-        \ || a:data.current_line =~ elixir#indent#().block_end)
+        \ && (a:data.current_line =~ s:ARROW
+        \ || a:data.current_line =~ s:BLOCK_END)
     let ind = b:old_ind.arrow
     let b:old_ind.arrow = 0
     return ind
@@ -60,7 +54,7 @@ function! elixir#indent#deindent_case_arrow(ind, data)
 endfunction
 
 function! elixir#indent#deindent_ending_symbols(ind, data)
-  if a:data.current_line =~ '^\s*\('.elixir#indent#().ending_symbols.'\)'
+  if a:data.current_line =~ '^\s*\('.s:ENDING_SYMBOLS.'\)'
     return a:ind - &sw
   else
     return a:ind
@@ -68,13 +62,13 @@ function! elixir#indent#deindent_ending_symbols(ind, data)
 endfunction
 
 function! elixir#indent#deindent_keywords(ind, data)
-  if a:data.current_line =~ elixir#indent#().deindent_keywords
+  if a:data.current_line =~ s:DEINDENT_KEYWORDS
     let bslnum = searchpair(
-          \ elixir#indent#().pair_start,
-          \ elixir#indent#().pair_middle,
-          \ elixir#indent#().pair_end,
+          \ s:PAIR_START,
+          \ s:PAIR_MIDDLE,
+          \ s:PAIR_END,
           \ 'nbW',
-          \ elixir#indent#().block_skip
+          \ s:BLOCK_SKIP
           \ )
 
     return indent(bslnum)
@@ -99,11 +93,11 @@ function! elixir#indent#deindent_opened_symbols(ind, data)
 endfunction
 
 function! elixir#indent#indent_after_pipeline(ind, data)
-  if a:data.last_line =~ elixir#indent#().starts_with_pipeline
+  if a:data.last_line =~ s:STARTS_WITH_PIPELINE
     if empty(substitute(a:data.current_line, ' ', '', 'g'))
-          \ || a:data.current_line =~ elixir#indent#().starts_with_pipeline
+          \ || a:data.current_line =~ s:STARTS_WITH_PIPELINE
       return indent(a:data.last_line_ref)
-    elseif a:data.last_line !~ elixir#indent#().indent_keywords
+    elseif a:data.last_line !~ s:INDENT_KEYWORDS
       let ind = b:old_ind.pipeline
       let b:old_ind.pipeline = 0
       return ind
@@ -114,7 +108,7 @@ function! elixir#indent#indent_after_pipeline(ind, data)
 endfunction
 
 function! elixir#indent#indent_assignment(ind, data)
-  if a:data.last_line =~ elixir#indent#().ending_with_assignment
+  if a:data.last_line =~ s:ENDING_WITH_ASSIGNMENT
     let b:old_ind.pipeline = indent(a:data.last_line_ref) " FIXME: side effect
     return a:ind + &sw
   else
@@ -131,7 +125,7 @@ function! elixir#indent#indent_brackets(ind, data)
 endfunction
 
 function! elixir#indent#indent_case_arrow(ind, data)
-  if a:data.last_line =~ elixir#indent#().end_with_arrow && a:data.last_line !~ '\<fn\>'
+  if a:data.last_line =~ s:END_WITH_ARROW && a:data.last_line !~ '\<fn\>'
     let b:old_ind.arrow = a:ind
     return a:ind + &sw
   else
@@ -140,7 +134,7 @@ function! elixir#indent#indent_case_arrow(ind, data)
 endfunction
 
 function! elixir#indent#indent_ending_symbols(ind, data)
-  if a:data.last_line =~ '^\s*\('.elixir#indent#().ending_symbols.'\)\s*$'
+  if a:data.last_line =~ '^\s*\('.s:ENDING_SYMBOLS.'\)\s*$'
     return a:ind + &sw
   else
     return a:ind
@@ -148,7 +142,7 @@ function! elixir#indent#indent_ending_symbols(ind, data)
 endfunction
 
 function! elixir#indent#indent_keywords(ind, data)
-  if a:data.last_line =~ elixir#indent#().indent_keywords
+  if a:data.last_line =~ s:INDENT_KEYWORDS
     return a:ind + &sw
   else
     return a:ind
@@ -158,7 +152,7 @@ endfunction
 function! elixir#indent#indent_parenthesis(ind, data)
   if s:pending_parenthesis(a:data) > 0
         \ && a:data.last_line !~ '^\s*def'
-        \ && a:data.last_line !~ elixir#indent#().end_with_arrow
+        \ && a:data.last_line !~ s:END_WITH_ARROW
     let b:old_ind.symbol = a:ind
     return matchend(a:data.last_line, '(')
   else
@@ -167,7 +161,7 @@ function! elixir#indent#indent_parenthesis(ind, data)
 endfunction
 
 function! elixir#indent#indent_pipeline_assignment(ind, data)
-  if a:data.current_line =~ elixir#indent#().starts_with_pipeline
+  if a:data.current_line =~ s:STARTS_WITH_PIPELINE
         \ && a:data.last_line =~ '^[^=]\+=.\+$'
     let b:old_ind.pipeline = indent(a:data.last_line_ref)
     " if line starts with pipeline
@@ -180,8 +174,8 @@ function! elixir#indent#indent_pipeline_assignment(ind, data)
 endfunction
 
 function! elixir#indent#indent_pipeline_continuation(ind, data)
-  if a:data.last_line =~ elixir#indent#().starts_with_pipeline
-        \ && a:data.current_line =~ elixir#indent#().starts_with_pipeline
+  if a:data.last_line =~ s:STARTS_WITH_PIPELINE
+        \ && a:data.current_line =~ s:STARTS_WITH_PIPELINE
     return indent(a:data.last_line_ref)
   else
     return a:ind
@@ -205,8 +199,8 @@ endfunction
 
 function! elixir#indent#deindent_case_arrow#(ind, data)
   if get(b:old_ind, 'arrow', 0) > 0
-        \ && (a:data.current_line =~ elixir#indent#().arrow
-        \ || a:data.current_line =~ elixir#indent#().block_end)
+        \ && (a:data.current_line =~ s:ARROW
+        \ || a:data.current_line =~ s:BLOCK_END)
     let ind = b:old_ind.arrow
     let b:old_ind.arrow = 0
     return ind
