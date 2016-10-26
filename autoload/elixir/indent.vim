@@ -29,6 +29,24 @@ function! elixir#indent#()
   return s:constants
 endfunction
 
+function! s:pending_parenthesis(data)
+  if a:data.last_line !~ elixir#indent#().arrow
+    return elixir#util#count_indentable_symbol_diff(a:data, '(', '\%(end\s*\)\@<!)')
+  end
+endfunction
+
+function! s:pending_square_brackets(data)
+  if a:data.last_line !~ elixir#indent#().arrow
+    return elixir#util#count_indentable_symbol_diff(a:data, '[', ']')
+  end
+endfunction
+
+function! s:pending_brackets(data)
+  if a:data.last_line !~ elixir#indent#().arrow
+    return elixir#util#count_indentable_symbol_diff(a:data, '{', '}')
+  end
+endfunction
+
 function! elixir#indent#deindent_case_arrow(ind, data)
   if get(b:old_ind, 'arrow', 0) > 0
         \ && (a:data.current_line =~ elixir#indent#().arrow
@@ -67,9 +85,9 @@ endfunction
 
 function! elixir#indent#deindent_opened_symbols(ind, data)
   let s:opened_symbol =
-        \   a:data.pending_parenthesis
-        \ + a:data.pending_square_brackets
-        \ + a:data.pending_brackets
+        \   s:pending_parenthesis(a:data)
+        \ + s:pending_square_brackets(a:data)
+        \ + s:pending_brackets(a:data)
 
   if s:opened_symbol < 0
     let ind = get(b:old_ind, 'symbol', a:ind + (s:opened_symbol * &sw))
@@ -105,7 +123,7 @@ function! elixir#indent#indent_assignment(ind, data)
 endfunction
 
 function! elixir#indent#indent_brackets(ind, data)
-  if a:data.pending_brackets > 0
+  if s:pending_brackets(a:data) > 0
     return a:ind + &sw
   else
     return a:ind
@@ -138,7 +156,7 @@ function! elixir#indent#indent_keywords(ind, data)
 endfunction
 
 function! elixir#indent#indent_parenthesis(ind, data)
-  if a:data.pending_parenthesis > 0
+  if s:pending_parenthesis(a:data) > 0
         \ && a:data.last_line !~ '^\s*def'
         \ && a:data.last_line !~ elixir#indent#().end_with_arrow
     let b:old_ind.symbol = a:ind
@@ -171,7 +189,7 @@ function! elixir#indent#indent_pipeline_continuation(ind, data)
 endfunction
 
 function! elixir#indent#indent_square_brackets(ind, data)
-  if a:data.pending_square_brackets > 0
+  if s:pending_square_brackets(a:data) > 0
     if a:data.last_line =~ '[\s*$'
       return a:ind + &sw
     else

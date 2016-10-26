@@ -49,16 +49,6 @@ function! s:build_data(line)
   let data.current_line = getline(data.current_line_ref)
   let data.last_line = getline(data.last_line_ref)
 
-  if data.last_line !~ elixir#indent#().arrow
-    let data.pending_parenthesis = elixir#util#count_indentable_symbol_diff(data, '(', '\%(end\s*\)\@<!)')
-    let data.pending_square_brackets = elixir#util#count_indentable_symbol_diff(data, '[', ']')
-    let data.pending_brackets = elixir#util#count_indentable_symbol_diff(data, '{', '}')
-  else
-    let data.pending_parenthesis = 0
-    let data.pending_square_brackets = 0
-    let data.pending_brackets = 0
-  end
-
   return data
 endfunction
 
